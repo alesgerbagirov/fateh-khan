@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Fateh Khan — strateji ağıl oyunu</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#111827; --card:#151b2c;
+    --text:#e6eaff; --muted:#b8c0d7; --accent:#5b9cff;
+    --grid:#9aa0a6; --empty:#f0f0f0; --lime:#37ff5b; --lime-dark:#1fb14a;
+    --red:#ff3b3b; --red-dark:#c62c2c;
+    --win:#10b981; --lose:#ef4444; --draw:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:linear-gradient(135deg,#0b1220,#0e1629 40%,#0a1020);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  .container{max-width:1200px;margin:0 auto;padding:20px}
+  header.nav{position:sticky;top:0;z-index:20;background:rgba(13,17,23,.7);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06)}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#2e72ff,#00e0ff);box-shadow:0 8px 30px rgba(46,114,255,.35)}
+  .pill{background:#192033;border:1px solid rgba(255,255,255,.06);color:var(--muted);padding:6px 10px;border-radius:999px;font-size:13px}
+  .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:20px;margin:22px 0 12px}
+  @media (max-width:980px){ .hero{grid-template-columns:1fr} }
+  .board-card{background:radial-gradient(1200px 500px at -10% -10%, #1a2440 0%, #0f1425 60%, #0c1120 100%);
+    border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:16px}
+  .board-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .panel{background:linear-gradient(180deg,#101629,#0c1222);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .group{background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px}
+  .group h3{margin:0 0 8px;font-size:14px;color:var(--muted);letter-spacing:.3px;text-transform:uppercase}
+  label{font-size:14px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  select,input[type="number"],input[type="range"]{background:#0d1324;color:#e6eaff;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:6px 8px}
+  input[type="range"]{appearance:none;height:6px;padding:0;border-radius:6px}
+  input[type="range"]::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #3b82f6;cursor:pointer}
+  .switch{position:relative;display:inline-block;width:48px;height:28px;vertical-align:middle}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;cursor:pointer;inset:0;background:#28314e;transition:.2s;border-radius:28px;border:1px solid rgba(255,255,255,.08)}
+  .slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;top:2px;background:white;border-radius:50%;transition:.2s}
+  input:checked + .slider{background:#3b82f6}
+  input:checked + .slider:before{transform:translateX(20px)}
+  button{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:8px 14px;font-weight:600;cursor:pointer}
+  button.ghost{background:#1a2340}
+  #boardBox{position:relative}
+  #canvas{display:block;width:100%;height:auto;max-height:75vh;border-radius:12px}
+  #overlay{position:absolute;inset:0;display:none;background:rgba(0,0,0,.55);align-items:center;justify-content:center;text-align:center;border-radius:12px}
+  #overlay .inner{background:#0f1320;color:#fff;padding:18px 22px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);min-width:300px}
+  .badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px}
+  .win{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35)}
+  .lose{background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.35)}
+  .draw{background:rgba(245,158,11,.15); border:1px solid rgba(245,158,11,.35)}
+  footer{margin:24px 0;color:#b8c0d7;font-size:13px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="container nav-inner">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <b>Fateh Khan</b>
+        <div style="color:#b8c0d7;font-size:13px">strateji ağıl oyunu • 0/1 mexanika • brauzerdə</div>
+      </div>
+    </div>
+    <div class="pill">R → Yenidən başlat • M → Musiqi</div>
+  </div>
+</header>
+
+<div class="container hero">
+  <!-- Sol: Oyun -->
+  <section class="board-card">
+    <div class="board-head">
+      <h2>Meydan</h2>
+      <div id="info">Gediş: <b id="turnWho">A (0)</b></div>
+    </div>
+    <div id="boardBox">
+      <canvas id="canvas" width="900" height="700"></canvas>
+      <div id="overlay">
+        <div class="inner">
+          <h4 id="result"></h4>
+          <div id="badgeRow" style="margin:6px 0 12px"></div>
+          <div style="display:flex;gap:10px;justify-content:center">
+            <button id="yesBtn">Yenidən başla</button>
+            <button id="noBtn" class="ghost">Bağla</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sağ: Parametrlər -->
+  <aside class="panel">
+    <div class="group">
+      <h3>Parametrlər</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label>Rejim:
+          <select id="mode">
+            <option value="hvc" selected>İnsan vs Kompüter</option>
+            <option value="hvh">İnsan vs İnsan</option>
+          </select>
+        </label>
+        <label>AI:
+          <select id="aiLevel">
+            <option value="EASY">ASAN</option>
+            <option value="MEDIUM">ORTA</option>
+            <option value="HARD" selected>ÇƏTİN</option>
+          </select>
+        </label>
+        <label>Meydan ölçüsü:
+          <input id="size" type="number" min="3" max="15" value="4" />
+        </label>
+        <label>Hüceyrə (px):
+          <input id="cell" type="number" value="-" disabled />
+        </label>
+
+        <label style="grid-column:1/-1;display:flex;align-items:center;gap:10px">
+          Musiqi:
+          <span class="switch">
+            <input type="checkbox" id="musicToggle">
+            <span class="slider"></span>
+          </span>
+          <span id="musicState" style="color:#b8c0d7;font-size:13px">Qapalı</span>
+        </label>
+
+        <label style="grid-column:1/-1;display:flex;align-items:center;gap:10px">
+          Musiqi səsi:
+          <input id="musicVol" type="range" min="0" max="100" value="52" />
+          <span id="musicVolLabel" style="font-size:13px;color:#b8c0d7">52%</span>
+        </label>
+
+        <label style="grid-column:1/-1"><input id="toggle" type="checkbox" checked /> Dolu xananı kliklə boşalt</label>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button id="restartBtn">Yenidən başlat</button>
+        <button id="clearBtn" class="ghost">Hamısını sil</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<footer class="container">
+  <div>© 2025 Fateh Khan — Bütün səs/musiqi effektləri WebAudio ilə generasiya olunur</div>
+  <div>İpucu: ÇƏTİN rejim diaqonallarda aqressiv bloklayır.</div>
+</footer>
+
+<script>
+(() => {
+  // ---------- Canvas / DOM ----------
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { alpha:false });
+  const overlay = document.getElementById('overlay');
+  const resultEl = document.getElementById('result');
+  const badgeRow = document.getElementById('badgeRow');
+  const turnWhoEl = document.getElementById('turnWho');
+  const modeSel = document.getElementById('mode');
+  const aiSel = document.getElementById('aiLevel');
+  const sizeInp = document.getElementById('size');
+  const cellInp = document.getElementById('cell');
+  const toggleInp = document.getElementById('toggle');
+  const restartBtn = document.getElementById('restartBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const musicToggleEl = document.getElementById('musicToggle');
+  const musicStateEl  = document.getElementById('musicState');
+  const musicVolEl    = document.getElementById('musicVol');
+  const musicVolLabel = document.getElementById('musicVolLabel');
+
+  // ---------- WebAudio ----------
+  let audioCtx, masterGain, musicGain, sfxGain, comp;
+  let seqTimer = null;
+  let firstGestureDone = false;
+  let musicActive = false;
+
+  // Preferences
+  let musicOnPref = false;
+  let musicVolPref = 0.26; // 0..1 arası
+
+  try {
+    const savedOn  = localStorage.getItem('fk_music_on');
+    const savedVol = localStorage.getItem('fk_music_vol');
+    musicOnPref  = savedOn ? (savedOn === '1') : false;
+    musicVolPref = savedVol ? Math.max(0, Math.min(1, parseFloat(savedVol))) : 0.26;
+  } catch(_) {}
+
+  // UI-ya tətbiq et
+  musicToggleEl.checked = musicOnPref;
+  musicStateEl.textContent = musicOnPref ? 'Açıq' : 'Qapalı';
+  musicVolEl.value = Math.round(musicVolPref * 100);
+  musicVolLabel.textContent = `${musicVolEl.value}%`;
+
+  function ensureAudio(){
+    if(audioCtx) return;
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    musicGain  = audioCtx.createGain();
+    sfxGain    = audioCtx.createGain();
+
+    comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.knee.value = 22; comp.ratio.value = 3;
+    comp.attack.value = 0.01; comp.release.value = 0.18;
+
+    masterGain.gain.value = 1.0;
+    musicGain.gain.value  = musicVolPref;
+    sfxGain.gain.value    = 0.95;
+
+    musicGain.connect(comp);
+    sfxGain.connect(comp);
+    comp.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+  }
+
+  function makeTone({type='sine', freq=440, dur=0.25, gain=0.6, lp=1400, start=0}){
+    ensureAudio();
+    const now = audioCtx.currentTime + start;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    const f = audioCtx.createBiquadFilter();
+    o.type = type; o.frequency.setValueAtTime(freq, now);
+    f.type='lowpass'; f.frequency.setValueAtTime(lp, now); f.Q.value=0.9;
+
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(gain, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    o.connect(g); g.connect(f); f.connect(sfxGain);
+    o.start(now); o.stop(now + dur + 0.03);
+  }
+
+  function clickBlip(freq=660, hard=false){
+    ensureAudio();
+    const now = audioCtx.currentTime;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    const f = audioCtx.createBiquadFilter();
+    o.type='square';
+    o.frequency.setValueAtTime(freq, now);
+    o.frequency.exponentialRampToValueAtTime(freq * (hard? 0.7 : 0.9), now+0.06);
+    f.type='bandpass'; f.frequency.value = hard? 1500 : 1100; f.Q.value = 4;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(hard?0.7:0.45, now+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now+0.12);
+    o.connect(g); g.connect(f); f.connect(sfxGain);
+    o.start(now); o.stop(now+0.15);
+  }
+
+  function cueWin(){ duckMusicBrief();
+    const base = 523.25;
+    makeTone({type:'triangle',freq:base, dur:0.18, gain:0.7});
+    makeTone({type:'triangle',freq:659.25, dur:0.18, gain:0.7, start:0.16});
+    makeTone({type:'triangle',freq:783.99, dur:0.22, gain:0.7, start:0.32});
+    makeTone({type:'sawtooth',freq:1046.5, dur:0.30, gain:0.5, start:0.48});
+  }
+  function cueLose(){ duckMusicBrief();
+    makeTone({type:'square',freq:440, dur:0.22, gain:0.6});
+    makeTone({type:'square',freq:392, dur:0.22, gain:0.6, start:0.16});
+    makeTone({type:'triangle',freq:329.63, dur:0.30, gain:0.55, start:0.32});
+  }
+  function cueDraw(){ duckMusicBrief();
+    makeTone({type:'sine',freq:392, dur:0.22, gain:0.6});
+    makeTone({type:'sine',freq:587.33, dur:0.22, gain:0.6, start:0.22});
+  }
+
+  // Musiqi loop
+  const PROG = [
+    [261.63, 329.63, 392.00],
+    [220.00, 261.63, 329.63],
+    [174.61, 220.00, 349.23],
+    [196.00, 246.94, 392.00],
+  ];
+  let musicBeatMs = 600;
+
+  function playNoteMusic(freq, when, dur=0.30){
+    ensureAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    const f = audioCtx.createBiquadFilter();
+    o.type="triangle";
+    f.type="lowpass"; f.frequency.value=1000; f.Q.value=0.7;
+    o.frequency.setValueAtTime(freq, when);
+    g.gain.setValueAtTime(0.0001, when);
+    g.gain.exponentialRampToValueAtTime(0.18, when+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, when+dur);
+    o.connect(g); g.connect(f); f.connect(musicGain);
+    o.start(when); o.stop(when + dur + 0.05);
+  }
+  function scheduleChord(step, when){
+    const chord = PROG[step];
+    const t = when || (audioCtx.currentTime + 0.02);
+    playNoteMusic(chord[0], t+0.00, 0.34);
+    playNoteMusic(chord[1], t+0.06, 0.30);
+    playNoteMusic(chord[2], t+0.12, 0.28);
+  }
+  function startMusicLoop(){
+    if(musicActive || !musicOnPref) return;
+    ensureAudio();
+    let step = 0;
+    scheduleChord(step); step = (step+1)%PROG.length;
+    seqTimer = setInterval(()=>{
+      const t = audioCtx.currentTime + 0.02;
+      scheduleChord(step, t);
+      step = (step+1)%PROG.length;
+    }, musicBeatMs);
+    musicActive = true;
+  }
+  function stopMusicLoop(){
+    if(!musicActive) return;
+    if(seqTimer){ clearInterval(seqTimer); seqTimer=null; }
+    const now = audioCtx.currentTime;
+    musicGain.gain.cancelScheduledValues(now);
+    musicGain.gain.setTargetAtTime(0.0001, now, 0.25);
+    setTimeout(()=>{ musicGain.gain.value = musicVolPref; }, 500);
+    musicActive = false;
+  }
+  function duckMusicBrief(){
+    if(!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const back = musicVolPref;
+    musicGain.gain.setTargetAtTime(Math.max(0, back-0.18), now, 0.02);
+    musicGain.gain.setTargetAtTime(back, now+0.6, 0.2);
+  }
+
+  function primeAudioGesture(){
+    if(firstGestureDone) return;
+    ensureAudio();
+    audioCtx.resume().then(()=>{ firstGestureDone = true; });
+  }
+  window.addEventListener('pointerdown', primeAudioGesture, { once:true });
+  window.addEventListener('keydown', primeAudioGesture, { once:true });
+
+  // ---------- Oyun vəziyyəti ----------
+  let N = 4;  sizeInp.value = '4';
+  let CELL = 64;
+  let OFFX = 30, OFFY = 70;
+  let board = [];
+  let current = 'A';
+  let gameActive = true, showPrompt = false;
+  let playVsAI = (modeSel.value==='hvc');
+  let AI_LEVEL = aiSel.value;
+  let ALLOW_TOGGLE = toggleInp.checked;
+  let musicStartedForThisRound = false;
+
+  // QALİB ARDIcILLIQ XƏRİTƏLƏRİ (tündləşdirmə üçün)
+  let highlightA = new Set(); // A-nın ən uzun(lar)
+  let highlightB = new Set(); // B-nin ən uzun(lar)
+
+  // ---------- Util ----------
+  const idx=(r,c)=>r*N+c;
+  const empties=a=>{const o=[];for(let i=0;i<a.length;i++) if(a[i]==='') o.push(i); return o;};
+
+  // Dinamik layout
+  function computeLayout(){
+    const W = Math.min(900, document.getElementById('boardBox').clientWidth);
+    canvas.width  = Math.max(W, 360);
+    canvas.height = Math.max(140 + 300, Math.min(window.innerHeight*0.75, 900));
+    const padX = 30, padY = 30;
+    const availW = canvas.width  - padX*2;
+    const availH = canvas.height - (padY*2 + 40);
+    CELL = Math.floor(Math.min(availW/N, availH/N));
+    CELL = Math.max(28, CELL);
+    const boardW = N*CELL, boardH = N*CELL;
+    OFFX = Math.floor((canvas.width  - boardW)/2);
+    OFFY = Math.floor((canvas.height - boardH)/2);
+    cellInp.value = CELL.toString();
+  }
+
+  function initBoard(clearOnly=false){
+    if(clearOnly){ board = Array(N*N).fill(''); draw(); return; }
+    board = Array(N*N).fill('');
+    current='A'; gameActive=true; showPrompt=false;
+    highlightA.clear(); highlightB.clear();
+    overlay.style.display='none'; turnWhoEl.textContent='A (0)';
+    draw();
+    musicStartedForThisRound = false;
+  }
+
+  // ---------- Max ardıcıllıq + indeksləri tap ----------
+  function findBestRuns(who){
+    let best=0; let runs=[];
+
+    function processLine(lineIdxs){
+      let start=0;
+      while(start<lineIdxs.length){
+        // boşları öt
+        while(start<lineIdxs.length && board[lineIdxs[start]]!==who) start++;
+        if(start>=lineIdxs.length) break;
+        let end=start;
+        while(end<lineIdxs.length && board[lineIdxs[end]]===who) end++;
+        const len=end-start;
+        if(len>0){
+          if(len>best){ best=len; runs=[lineIdxs.slice(start,end)]; }
+          else if(len===best){ runs.push(lineIdxs.slice(start,end)); }
+        }
+        start=end;
+      }
+    }
+
+    // sətirlər
+    for(let r=0;r<N;r++){
+      const line=[]; for(let c=0;c<N;c++) line.push(idx(r,c));
+      processLine(line);
+    }
+    // sütunlar
+    for(let c=0;c<N;c++){
+      const line=[]; for(let r=0;r<N;r++) line.push(idx(r,c));
+      processLine(line);
+    }
+    // əsas diaqonallar (↘)
+    for(let sc=0; sc<N; sc++){
+      const line=[]; for(let r=0,c=sc; r<N && c<N; r++,c++) line.push(idx(r,c));
+      processLine(line);
+    }
+    for(let sr=1; sr<N; sr++){
+      const line=[]; for(let r=sr,c=0; r<N && c<N; r++,c++) line.push(idx(r,c));
+      processLine(line);
+    }
+    // əks diaqonallar (↙)
+    for(let sc=0; sc<N; sc++){
+      const line=[]; for(let r=0,c=sc; r<N && c>=0; r++,c--) line.push(idx(r,c));
+      processLine(line);
+    }
+    for(let sr=1; sr<N; sr++){
+      const line=[]; for(let r=sr,c=N-1; r<N && c>=0; r++,c--) line.push(idx(r,c));
+      processLine(line);
+    }
+    return {best, runs};
+  }
+
+  function computeMaxSequences(arr){
+    // köhnə funksiyanı saxlayırıq (AI üçün), bu board ilə işləyir
+    let maxA=0,maxB=0;
+    for(let r=0;r<N;r++){ let a=0,b=0; for(let c=0;c<N;c++){ const v=arr[idx(r,c)];
+      if(v==='A'){ a++; b=0; if(a>maxA) maxA=a; } else if(v==='B'){ b++; a=0; if(b>maxB) maxB=b; } else { a=0; b=0; }
+    } }
+    for(let c=0;c<N;c++){ let a=0,b=0; for(let r=0;r<N;r++){ const v=arr[idx(r,c)];
+      if(v==='A'){ a++; b=0; if(a>maxA) maxA=a; } else if(v==='B'){ b++; a=0; if(b>maxB) maxB=b; } else { a=0; b=0; }
+    } }
+    for(let sc=0;sc<N;sc++){ let a=0,b=0; for(let r=0,c=sc;r<N&&c<N;r++,c++){ const v=arr[idx(r,c)];
+      if(v==='A'){ a++; b=0; if(a>maxA) maxA=a; } else if(v==='B'){ b++; a=0; if(b>maxB) maxB=b; } else { a=0; b=0; }
+    } }
+    for(let sr=1;sr<N;sr++){ let a=0,b=0; for(let r=sr,c=0;r<N&&c<N;r++,c++){ const v=arr[idx(r,c)];
+      if(v==='A'){ a++; b=0; if(a>maxA) maxA=a; } else if(v==='B'){ b++; a=0; if(b>maxB) maxB=b; } else { a=0; b=0; }
+    } }
+    for(let sc=0;sc<N;sc++){ let a=0,b=0; for(let r=0,c=sc;r<N&&c>=0;r++,c--){ const v=arr[idx(r,c)];
+      if(v==='A'){ a++; b=0; if(a>maxA) maxA=a; } else if(v==='B'){ b++; a=0; if(b>maxB) maxB=b; } else { a=0; b=0; }
+    } }
+    for(let sr=1;sr<N;sr++){ let a=0,b=0; for(let r=sr,c=N-1;r<N&&c>=0;r++,c--){ const v=arr[idx(r,c)];
+      if(v==='A'){ a++; b=0; if(a>maxA) maxA=a; } else if(v==='B'){ b++; a=0; if(b>maxB) maxB=b; } else { a=0; b=0; }
+    } }
+    return [maxA,maxB];
+  }
+
+  function linePotentialIf(arr,i,who){
+    const r=Math.floor(i/N), c=i%N;
+    const countRun=(arr,r,c,dr,dc,who)=>{ let rr=r,cc=c,cnt=0; while(rr>=0&&rr<N&&cc>=0&&cc<N&&arr[idx(rr,cc)]===who){ cnt++; rr+=dr; cc+=dc; } return cnt; };
+    const h=1+countRun(arr,r,c-1,0,-1,who)+countRun(arr,r,c+1,0,1,who);
+    const v=1+countRun(arr,r-1,c,-1,0,who)+countRun(arr,r+1,c,1,0,who);
+    const d1=1+countRun(arr,r-1,c-1,-1,-1,who)+countRun(arr,r+1,c+1,1,1,who);
+    const d2=1+countRun(arr,r-1,c+1,-1,1,who)+countRun(arr,r+1,c-1,1,-1,who);
+    return {h,v,d1,d2,max:Math.max(h,v,d1,d2)};
+  }
+  function threatScoreA(arr,i){ const p=linePotentialIf(arr,i,'A'); const diagBoost=(p.d1>=p.max)?0.4:0; return p.max+diagBoost; }
+
+  // ---------- Bitmə ----------
+  function showEndPrompt(msg, type){
+    gameActive=false; showPrompt=true; resultEl.textContent=msg;
+    badgeRow.innerHTML="";
+    const b=document.createElement('span');
+    b.className="badge "+(type==='win'?'win':(type==='lose'?'lose':'draw'));
+    b.textContent= type==='win'?'Qələbə!':(type==='lose'?'Məğlubiyyət':'Bərabərlik');
+    badgeRow.appendChild(b);
+    overlay.style.display='flex';
+  }
+
+  function finishIfEnded(){
+    for(let i=0;i<board.length;i++) if(board[i]==='') return;
+
+    // Max dəyərlər
+    const [maxA,maxB]=computeMaxSequences(board);
+
+    // Qalibin (və ya hər ikisinin) ən uzun ardıcıllıq xətləri
+    const bestA = findBestRuns('A'); // {best, runs}
+    const bestB = findBestRuns('B');
+
+    highlightA.clear(); highlightB.clear();
+    if(maxA>0) bestA.runs.forEach(arr=>arr.forEach(i=>highlightA.add(i)));
+    if(maxB>0) bestB.runs.forEach(arr=>arr.forEach(i=>highlightB.add(i)));
+
+    let msg='', type='draw';
+    if(maxA>maxB){ msg=`A oyunçusu (0) qalib! Maksimum ardıcıllıq: ${maxA}`; type='win'; cueWin(); }
+    else if(maxB>maxA){ msg=`B oyunçusu (1) qalib! Maksimum ardıcıllıq: ${maxB}`; type='lose'; cueLose(); }
+    else { msg=`Bərabərlik! Maksimum ardıcıllıq: ${maxA}`; type='draw'; cueDraw(); }
+
+    // Xanaları tündləşdirib göstərmək üçün çəkilişi yenilə, sonra pəncərəni aç
+    draw();
+    showEndPrompt(msg,type);
+    stopMusicLoop();
+  }
+
+  // ---------- AI ----------
+  function simPlace(arr,i,who){ const t=arr.slice(); t[i]=who; return t; }
+  function selfImproveDeltaB(){
+    const em=empties(board); if(!em.length) return {idx:-1,gain:-1,tieA:1e9};
+    const [curA,curB]=computeMaxSequences(board);
+    let bestIdx=-1,bestGain=-1,tieMinA=1e9;
+    for(const i of em){
+      const tmp=simPlace(board,i,'B'); const [sA,sB]=computeMaxSequences(tmp);
+      const gain=sB-curB; if(gain>bestGain||(gain===bestGain&&sA<tieMinA)){bestIdx=i;bestGain=gain;tieMinA=sA;}
+    }
+    return {idx:bestIdx,gain:bestGain,tieA:tieMinA};
+  }
+  function computerMove(){
+    const em=empties(board); if(!em.length) return; let chosen=-1;
+    if(aiSel.value==='EASY'){ chosen=em[Math.floor(Math.random()*em.length)];
+    }else if(aiSel.value==='MEDIUM'){ const self=selfImproveDeltaB(); chosen=(self.idx>=0&&self.gain>0)?self.idx:em[Math.floor(Math.random()*em.length)];
+    }else{
+      let worstIdx=-1,worstScore=-1; for(const i of em){ const sc=threatScoreA(board,i); if(sc>worstScore){worstScore=sc;worstIdx=i;} }
+      const self=selfImproveDeltaB(); const blockFirst=(worstScore>=3)||(self.gain<=1)||(worstScore>=self.gain+0.5);
+      if(blockFirst&&worstIdx>=0) chosen=worstIdx;
+      else if(self.idx>=0&&self.gain>0) chosen=self.idx;
+      else{ let potBest=-1,potIdx=-1; for(const i of em){ const p=linePotentialIf(board,i,'A'); const val=p.max+((p.d1===p.max)?0.2:0); if(val>potBest){potBest=val;potIdx=i;} }
+        chosen=(potIdx>=0)?potIdx:em[Math.floor(Math.random()*em.length)];
+      }
+    }
+    board[chosen]='B'; current='A'; turnWhoEl.textContent='A (0)'; finishIfEnded(); draw();
+    clickBlip(520,true);
+  }
+
+  // ---------- Çəkiliş ----------
+  function modeLabelText(){ return (modeSel.value==='hvc') ? 'İnsan vs Kompüter' : 'İnsan vs İnsan'; }
+  function aiLabelText(ai){ return ai==='EASY'?'ASAN':(ai==='MEDIUM'?'ORTA':'ÇƏTİN'); }
+
+  function draw(){
+    computeLayout();
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#e6eaff'; ctx.font='600 22px system-ui';
+    ctx.fillText(`Rejim: ${modeLabelText()}  •  AI: ${aiLabelText(aiSel.value)}`, 30, 36);
+    ctx.fillStyle='#b8c0d7'; ctx.font='16px system-ui';
+    ctx.fillText(`Gediş: ${current==='A'?'A (0)':'B (1)'}   |   [R] Yenidən başlat · [M] Musiqi: ${musicOnPref?'Açıq':'Qapalı'} (${Math.round(musicVolPref*100)}%)`, 30, 58);
+
+    for(let r=0;r<N;r++){ for(let c=0;c<N;c++){
+      const x=OFFX + c*CELL, y=OFFY + r*CELL, w=CELL-2, h=CELL-2;
+      const id=idx(r,c);
+      const v=board[id];
+
+      // tündləşdirmə üçün rəng seçimi
+      let fill='#f0f0f0';
+      if(v==='A'){
+        fill = highlightA.has(id) ? getCSSVar('--lime-dark') : getCSSVar('--lime');
+      }else if(v==='B'){
+        fill = highlightB.has(id) ? getCSSVar('--red-dark') : getCSSVar('--red');
+      }
+
+      ctx.fillStyle = fill;
+      roundRect(x,y,w,h,10,true,false);
+      ctx.strokeStyle='#9aa0a6'; ctx.lineWidth=1; roundRect(x,y,w,h,10,false,true);
+
+      if(v!==''){
+        // tünd hüceyrədə ağ, adi hüceyrədə qara mətn
+        const dark = (v==='A' && highlightA.has(id)) || (v==='B' && highlightB.has(id));
+        ctx.fillStyle = dark ? '#fff' : '#000';
+        ctx.font='bold 24px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(v==='A'?'0':'1', x+w/2, y+h/2);
+        ctx.textAlign='start'; ctx.textBaseline='alphabetic';
+      }
+    }}
+  }
+
+  function getCSSVar(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#000';
+  }
+
+  function roundRect(x,y,w,h,r,fill,stroke){
+    ctx.beginPath(); ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+    if(fill) ctx.fill(); if(stroke) ctx.stroke();
+  }
+
+  // ---------- Overlay ----------
+  function showPromptClose(){ overlay.style.display='none'; showPrompt=false; }
+  function restartGame(){
+    stopMusicLoop();
+    musicStartedForThisRound=false;
+    initBoard();
+  }
+  document.getElementById('yesBtn').addEventListener('click', restartGame);
+  document.getElementById('noBtn').addEventListener('click', showPromptClose);
+
+  // ---------- Input ----------
+  function cellAtPageXY(px,py){
+    const rect=canvas.getBoundingClientRect();
+    const sx=canvas.width/rect.width, sy=canvas.height/rect.height;
+    const x=(px-rect.left)*sx, y=(py-rect.top)*sy;
+    const c=Math.floor((x-OFFX)/CELL), r=Math.floor((y-OFFY)/CELL);
+    return (r>=0&&r<N&&c>=0&&c<N)? idx(r,c) : -1;
+  }
+  canvas.addEventListener('mousedown',(e)=>{
+    if(!gameActive||showPrompt) return;
+
+    if(!musicStartedForThisRound && musicOnPref){
+      primeAudioGesture();
+      startMusicLoop();
+      musicStartedForThisRound = true;
+    }
+
+    const i=cellAtPageXY(e.clientX,e.clientY); if(i<0) return;
+    if(ALLOW_TOGGLE&&board[i]!==''){ board[i]=''; draw(); clickBlip(480,false); return; }
+    if(board[i]===''){
+      if(modeSel.value==='hvc' && current!=='A') return;
+      board[i]=current;
+      clickBlip(current==='A'?740:520,false);
+      current=(current==='A')?'B':'A'; turnWhoEl.textContent=(current==='A')?'A (0)':'B (1)';
+      finishIfEnded(); draw();
+      if(modeSel.value==='hvc'&&gameActive&&current==='B'){ setTimeout(()=>{ if(gameActive&&current==='B') computerMove(); }, 100); }
+    }
+  });
+
+  // ---------- Musiqi pref / səs səviyyəsi ----------
+  function updateMusicUI(){
+    musicStateEl.textContent = musicOnPref ? 'Açıq' : 'Qapalı';
+    musicVolLabel.textContent = `${Math.round(musicVolPref*100)}%`;
+    musicVolEl.value = Math.round(musicVolPref*100);
+    draw();
+  }
+  function setMusicPref(on){
+    musicOnPref = !!on;
+    try { localStorage.setItem('fk_music_on', musicOnPref ? '1':'0'); } catch(_){}
+    musicToggleEl.checked = musicOnPref;
+    updateMusicUI();
+    if(!musicOnPref){ stopMusicLoop(); }
+    else if(gameActive){
+      primeAudioGesture();
+      startMusicLoop();
+      musicStartedForThisRound = true;
+    }
+  }
+  function setMusicVolume(v01){
+    musicVolPref = Math.max(0, Math.min(1, v01));
+    try { localStorage.setItem('fk_music_vol', String(musicVolPref)); } catch(_){}
+    ensureAudio();
+    const now = audioCtx.currentTime;
+    musicGain.gain.cancelScheduledValues(now);
+    musicGain.gain.setTargetAtTime(musicVolPref, now, 0.05);
+    updateMusicUI();
+  }
+
+  musicToggleEl.addEventListener('change', ()=> setMusicPref(musicToggleEl.checked));
+  musicVolEl.addEventListener('input', ()=> setMusicVolume(musicVolEl.value/100));
+
+  // ---------- UI ----------
+  restartBtn.addEventListener('click', restartGame);
+  clearBtn.addEventListener('click', ()=>{ board = Array(N*N).fill(''); highlightA.clear(); highlightB.clear(); draw(); });
+  window.addEventListener('keydown',(e)=>{
+    if(e.key==='r'||e.key==='R') restartGame();
+    if(e.key==='m'||e.key==='M') setMusicPref(!musicOnPref);
+    if(showPrompt){
+      if(e.key==='Enter'||e.key==='y') restartGame();
+      if(e.key==='Escape'||e.key==='n') showPromptClose();
+    }
+  });
+  window.addEventListener('resize', draw);
+  modeSel.addEventListener('change', ()=>{ playVsAI=(modeSel.value==='hvc'); initBoard(); });
+  aiSel.addEventListener('change',  ()=>{ draw(); });
+  sizeInp.addEventListener('change', ()=>{ N=Math.max(3,Math.min(15,Number(sizeInp.value||4))); initBoard(); });
+  toggleInp.addEventListener('change', ()=>{ ALLOW_TOGGLE=toggleInp.checked; });
+
+  // ---------- Start ----------
+  updateMusicUI();
+  initBoard();
+
+})();
+</script>
+</body>
+</html>
