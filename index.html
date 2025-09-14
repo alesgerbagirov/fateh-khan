@@ -464,7 +464,7 @@
     badgeRow.innerHTML="";
     const b=document.createElement('span');
     b.className="badge "+(type==='win'?'win':(type==='lose'?'lose':'draw'));
-    b.textContent= type==='win'?'Qələbə!':(type==='lose'?'Məğlubiyyət':'Bərabərlik');
+    b.textContent= type==='win'?'Təbriklər, siz qalibsiniz!':(type==='lose'?'Məğlubiyyətlə barışmayın!':'Qalib olmadı, bərabərə qaldınız.');
     badgeRow.appendChild(b);
     overlay.style.display='flex';
   }
@@ -670,3 +670,4 @@
 </script>
 </body>
 </html>
+
