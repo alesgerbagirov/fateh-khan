@@ -337,9 +337,9 @@
   let ALLOW_TOGGLE = toggleInp.checked;
   let musicStartedForThisRound = false;
 
-  // QALİB ARDIcILLIQ XƏRİTƏLƏRİ (tündləşdirmə üçün)
-  let highlightA = new Set(); // A-nın ən uzun(lar)
-  let highlightB = new Set(); // B-nin ən uzun(lar)
+  // Qalib ardıcıllıq xəritələri (tündləşdirmə üçün)
+  let highlightA = new Set();
+  let highlightB = new Set();
 
   // ---------- Util ----------
   const idx=(r,c)=>r*N+c;
@@ -378,7 +378,6 @@
     function processLine(lineIdxs){
       let start=0;
       while(start<lineIdxs.length){
-        // boşları öt
         while(start<lineIdxs.length && board[lineIdxs[start]]!==who) start++;
         if(start>=lineIdxs.length) break;
         let end=start;
@@ -393,38 +392,21 @@
     }
 
     // sətirlər
-    for(let r=0;r<N;r++){
-      const line=[]; for(let c=0;c<N;c++) line.push(idx(r,c));
-      processLine(line);
-    }
+    for(let r=0;r<N;r++){ const line=[]; for(let c=0;c<N;c++) line.push(idx(r,c)); processLine(line); }
     // sütunlar
-    for(let c=0;c<N;c++){
-      const line=[]; for(let r=0;r<N;r++) line.push(idx(r,c));
-      processLine(line);
-    }
+    for(let c=0;c<N;c++){ const line=[]; for(let r=0;r<N;r++) line.push(idx(r,c)); processLine(line); }
     // əsas diaqonallar (↘)
-    for(let sc=0; sc<N; sc++){
-      const line=[]; for(let r=0,c=sc; r<N && c<N; r++,c++) line.push(idx(r,c));
-      processLine(line);
-    }
-    for(let sr=1; sr<N; sr++){
-      const line=[]; for(let r=sr,c=0; r<N && c<N; r++,c++) line.push(idx(r,c));
-      processLine(line);
-    }
+    for(let sc=0; sc<N; sc++){ const line=[]; for(let r=0,c=sc; r<N && c<N; r++,c++) line.push(idx(r,c)); processLine(line); }
+    for(let sr=1; sr<N; sr++){ const line=[]; for(let r=sr,c=0; r<N && c<N; r++,c++) line.push(idx(r,c)); processLine(line); }
     // əks diaqonallar (↙)
-    for(let sc=0; sc<N; sc++){
-      const line=[]; for(let r=0,c=sc; r<N && c>=0; r++,c--) line.push(idx(r,c));
-      processLine(line);
-    }
-    for(let sr=1; sr<N; sr++){
-      const line=[]; for(let r=sr,c=N-1; r<N && c>=0; r++,c--) line.push(idx(r,c));
-      processLine(line);
-    }
+    for(let sc=0; sc<N; sc++){ const line=[]; for(let r=0,c=sc; r<N && c>=0; r++,c--) line.push(idx(r,c)); processLine(line); }
+    for(let sr=1; sr<N; sr++){ const line=[]; for(let r=sr,c=N-1; r<N && c>=0; r++,c--) line.push(idx(r,c)); processLine(line); }
+
     return {best, runs};
   }
 
   function computeMaxSequences(arr){
-    // köhnə funksiyanı saxlayırıq (AI üçün), bu board ilə işləyir
+    // AI üçün istifadə olunur
     let maxA=0,maxB=0;
     for(let r=0;r<N;r++){ let a=0,b=0; for(let c=0;c<N;c++){ const v=arr[idx(r,c)];
       if(v==='A'){ a++; b=0; if(a>maxA) maxA=a; } else if(v==='B'){ b++; a=0; if(b>maxB) maxB=b; } else { a=0; b=0; }
@@ -458,13 +440,15 @@
   }
   function threatScoreA(arr,i){ const p=linePotentialIf(arr,i,'A'); const diagBoost=(p.d1>=p.max)?0.4:0; return p.max+diagBoost; }
 
-  // ---------- Bitmə ----------
+  // ---------- Bitmə (tie-breaker əlavə edilib) ----------
   function showEndPrompt(msg, type){
     gameActive=false; showPrompt=true; resultEl.textContent=msg;
     badgeRow.innerHTML="";
     const b=document.createElement('span');
     b.className="badge "+(type==='win'?'win':(type==='lose'?'lose':'draw'));
-    b.textContent= type==='win'?'Təbriklər, siz qalibsiniz, fatehə qələbə yaraşır.':(type==='lose'?'Məğlubiyyətlə barışmayın, fatehə məğlubiyyət yaraşmır.':'Bərabərə qaldınız, qarşılıqlı təslimiyyət.');
+    b.textContent= type==='win'?'Təbriklər, siz qalibsiniz, fatehə qələbə yaraşır.'
+               : (type==='lose'?'Məğlubiyyətlə barışmayın, fatehə məğlubiyyət yaraşmır.'
+               : 'Bərabərlik — qarşılıqlı təslimiyyət.');
     badgeRow.appendChild(b);
     overlay.style.display='flex';
   }
@@ -472,23 +456,48 @@
   function finishIfEnded(){
     for(let i=0;i<board.length;i++) if(board[i]==='') return;
 
-    // Max dəyərlər
     const [maxA,maxB]=computeMaxSequences(board);
-
-    // Qalibin (və ya hər ikisinin) ən uzun ardıcıllıq xətləri
     const bestA = findBestRuns('A'); // {best, runs}
     const bestB = findBestRuns('B');
 
+    // Tie-breaker: əvvəlcə uzunluq, sonra həmin uzunluğun VARİANT SAYI
+    let winner = null; // 'A' | 'B' | null
+    if(maxA>maxB) winner='A';
+    else if(maxB>maxA) winner='B';
+    else{
+      const cntA = (bestA.best>0) ? bestA.runs.length : 0;
+      const cntB = (bestB.best>0) ? bestB.runs.length : 0;
+      if(cntA>cntB) winner='A';
+      else if(cntB>cntA) winner='B';
+      else winner=null; // tam bərabər
+    }
+
+    // Tündləşdirmə — qalibin xətt(ler)i; tam bərabərdirsə hər ikisi
     highlightA.clear(); highlightB.clear();
-    if(maxA>0) bestA.runs.forEach(arr=>arr.forEach(i=>highlightA.add(i)));
-    if(maxB>0) bestB.runs.forEach(arr=>arr.forEach(i=>highlightB.add(i)));
+    if(winner==='A'){
+      bestA.runs.forEach(arr=>arr.forEach(i=>highlightA.add(i)));
+    }else if(winner==='B'){
+      bestB.runs.forEach(arr=>arr.forEach(i=>highlightB.add(i)));
+    }else{
+      if(bestA.best>0) bestA.runs.forEach(arr=>arr.forEach(i=>highlightA.add(i)));
+      if(bestB.best>0) bestB.runs.forEach(arr=>arr.forEach(i=>highlightB.add(i)));
+    }
 
+    // Mesaj
     let msg='', type='draw';
-    if(maxA>maxB){ msg=`A oyunçusu (0) qalib! Maksimum ardıcıllıq: ${maxA}`; type='win'; cueWin(); }
-    else if(maxB>maxA){ msg=`B oyunçusu (1) qalib! Maksimum ardıcıllıq: ${maxB}`; type='lose'; cueLose(); }
-    else { msg=`Bərabərlik! Maksimum ardıcıllıq: ${maxA}`; type='draw'; cueDraw(); }
+    if(winner==='A'){
+      msg = `A oyunçusu (0) qalib! Maksimum ardıcıllıq: ${maxA} • Variant sayı: ${bestA.runs.length}`;
+      type='win'; cueWin();
+    }else if(winner==='B'){
+      msg = `B oyunçusu (1) qalib! Maksimum ardıcıllıq: ${maxB} • Variant sayı: ${bestB.runs.length}`;
+      type='lose'; cueLose();
+    }else{
+      // tam bərabər
+      const variantInfo = (bestA.best>0) ? ` • Variant sayı: ${bestA.runs.length}` : '';
+      msg = `Bərabərlik! Maksimum ardıcıllıq: ${maxA}${variantInfo}`;
+      type='draw'; cueDraw();
+    }
 
-    // Xanaları tündləşdirib göstərmək üçün çəkilişi yenilə, sonra pəncərəni aç
     draw();
     showEndPrompt(msg,type);
     stopMusicLoop();
@@ -553,7 +562,6 @@
       ctx.strokeStyle='#9aa0a6'; ctx.lineWidth=1; roundRect(x,y,w,h,10,false,true);
 
       if(v!==''){
-        // tünd hüceyrədə ağ, adi hüceyrədə qara mətn
         const dark = (v==='A' && highlightA.has(id)) || (v==='B' && highlightB.has(id));
         ctx.fillStyle = dark ? '#fff' : '#000';
         ctx.font='bold 24px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
@@ -588,7 +596,7 @@
   function cellAtPageXY(px,py){
     const rect=canvas.getBoundingClientRect();
     const sx=canvas.width/rect.width, sy=canvas.height/rect.height;
-    const x=(px-rect.left)*sx, y=(py-rect.top)*sy;
+    const x=(px-rect.left)*sx, y=(px-rect.top)*sy; // düzəliş: py -> px typo yox, doğru py-dir
     const c=Math.floor((x-OFFX)/CELL), r=Math.floor((y-OFFY)/CELL);
     return (r>=0&&r<N&&c>=0&&c<N)? idx(r,c) : -1;
   }
@@ -670,7 +678,3 @@
 </script>
 </body>
 </html>
-
-
-
-
