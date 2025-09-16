@@ -492,7 +492,6 @@
       msg = `B oyunçusu (1) qalib! Maksimum ardıcıllıq: ${maxB} • Variant sayı: ${bestB.runs.length}`;
       type='lose'; cueLose();
     }else{
-      // tam bərabər
       const variantInfo = (bestA.best>0) ? ` • Variant sayı: ${bestA.runs.length}` : '';
       msg = `Bərabərlik! Maksimum ardıcıllıq: ${maxA}${variantInfo}`;
       type='draw'; cueDraw();
@@ -596,7 +595,7 @@
   function cellAtPageXY(px,py){
     const rect=canvas.getBoundingClientRect();
     const sx=canvas.width/rect.width, sy=canvas.height/rect.height;
-    const x=(px-rect.left)*sx, y=(px-rect.top)*sy; // düzəliş: py -> px typo yox, doğru py-dir
+    const x=(px-rect.left)*sx, y=(py-rect.top)*sy; // ← düzəliş: burada py istifadə olunur
     const c=Math.floor((x-OFFX)/CELL), r=Math.floor((y-OFFY)/CELL);
     return (r>=0&&r<N&&c>=0&&c<N)? idx(r,c) : -1;
   }
