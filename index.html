@@ -464,7 +464,7 @@
     badgeRow.innerHTML="";
     const b=document.createElement('span');
     b.className="badge "+(type==='win'?'win':(type==='lose'?'lose':'draw'));
-    b.textContent= type==='win'?'Təbriklər, siz qalibsiniz, fatehə qələbə yaraşır.':(type==='lose'?'Məğlubiyyətlə barışmayın, fatehə məğlubiyyət yaraşmır.':'Bərabərə qaldınız, heç kim qalib olmadı.');
+    b.textContent= type==='win'?'Təbriklər, siz qalibsiniz, fatehə qələbə yaraşır.':(type==='lose'?'Məğlubiyyətlə barışmayın, fatehə məğlubiyyət yaraşmır.':'Bərabərə qaldınız, qarşılıqlı təslimiyyət.');
     badgeRow.appendChild(b);
     overlay.style.display='flex';
   }
@@ -670,6 +670,7 @@
 </script>
 </body>
 </html>
+
 
 
 
