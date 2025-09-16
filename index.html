@@ -66,6 +66,7 @@
 </header>
 
 <div class="container hero">
+  <!-- Sol: Oyun -->
   <section class="board-card">
     <div class="board-head">
       <h2>Fatehlər Meydanı</h2>
@@ -86,6 +87,7 @@
     </div>
   </section>
 
+  <!-- Sağ: Parametrlər -->
   <aside class="panel">
     <div class="group">
       <h3>Parametrlər</h3>
@@ -169,7 +171,7 @@
 
   // Preferences
   let musicOnPref = false;
-  let musicVolPref = 0.26; // 0..1
+  let musicVolPref = 0.26; // 0..1 arası
 
   try {
     const savedOn  = localStorage.getItem('fk_music_on');
@@ -178,6 +180,7 @@
     musicVolPref = savedVol ? Math.max(0, Math.min(1, parseFloat(savedVol))) : 0.26;
   } catch(_) {}
 
+  // UI-ya tətbiq et
   musicToggleEl.checked = musicOnPref;
   musicStateEl.textContent = musicOnPref ? 'Açıq' : 'Qapalı';
   musicVolEl.value = Math.round(musicVolPref * 100);
@@ -255,6 +258,7 @@
     makeTone({type:'sine',freq:587.33, dur:0.22, gain:0.6, start:0.22});
   }
 
+  // Musiqi loop
   const PROG = [
     [261.63, 329.63, 392.00],
     [220.00, 261.63, 329.63],
@@ -333,7 +337,7 @@
   let ALLOW_TOGGLE = toggleInp.checked;
   let musicStartedForThisRound = false;
 
-  // Qalib xəttlərini tündləşdirmək üçün
+  // Qalib ardıcıllıq xəritələri (tündləşdirmə üçün)
   let highlightA = new Set();
   let highlightB = new Set();
 
@@ -402,7 +406,7 @@
   }
 
   function computeMaxSequences(arr){
-    // bütöv lövhə üzrə maksimum ardıcıl sayları
+    // AI üçün istifadə olunur
     let maxA=0,maxB=0;
     for(let r=0;r<N;r++){ let a=0,b=0; for(let c=0;c<N;c++){ const v=arr[idx(r,c)];
       if(v==='A'){ a++; b=0; if(a>maxA) maxA=a; } else if(v==='B'){ b++; a=0; if(b>maxB) maxB=b; } else { a=0; b=0; }
@@ -436,7 +440,7 @@
   }
   function threatScoreA(arr,i){ const p=linePotentialIf(arr,i,'A'); const diagBoost=(p.d1>=p.max)?0.4:0; return p.max+diagBoost; }
 
-  // ---------- Bitmə (tie-breaker daxildir) ----------
+  // ---------- Bitmə (tie-breaker əlavə edilib) ----------
   function showEndPrompt(msg, type){
     gameActive=false; showPrompt=true; resultEl.textContent=msg;
     badgeRow.innerHTML="";
@@ -450,7 +454,6 @@
   }
 
   function finishIfEnded(){
-    // yalnız lövhə dolanda yekunlaşdır
     for(let i=0;i<board.length;i++) if(board[i]==='') return;
 
     const [maxA,maxB]=computeMaxSequences(board);
@@ -469,7 +472,7 @@
       else winner=null; // tam bərabər
     }
 
-    // Qalib xətləri (tünd)
+    // Tündləşdirmə — qalibin xətt(ler)i; tam bərabərdirsə hər ikisi
     highlightA.clear(); highlightB.clear();
     if(winner==='A'){
       bestA.runs.forEach(arr=>arr.forEach(i=>highlightA.add(i)));
@@ -489,6 +492,7 @@
       msg = `B oyunçusu (1) qalib! Maksimum ardıcıllıq: ${maxB} • Variant sayı: ${bestB.runs.length}`;
       type='lose'; cueLose();
     }else{
+      // tam bərabər
       const variantInfo = (bestA.best>0) ? ` • Variant sayı: ${bestA.runs.length}` : '';
       msg = `Bərabərlik! Maksimum ardıcıllıq: ${maxA}${variantInfo}`;
       type='draw'; cueDraw();
@@ -545,7 +549,7 @@
       const id=idx(r,c);
       const v=board[id];
 
-      // tündləşdirmə rəngləri
+      // tündləşdirmə üçün rəng seçimi
       let fill='#f0f0f0';
       if(v==='A'){
         fill = highlightA.has(id) ? getCSSVar('--lime-dark') : getCSSVar('--lime');
@@ -592,7 +596,7 @@
   function cellAtPageXY(px,py){
     const rect=canvas.getBoundingClientRect();
     const sx=canvas.width/rect.width, sy=canvas.height/rect.height;
-    const x=(px-rect.left)*sx, y=(py-rect.top)*sy; // düz: py istifadə olunur
+    const x=(px-rect.left)*sx, y=(px-rect.top)*sy; // düzəliş: py -> px typo yox, doğru py-dir
     const c=Math.floor((x-OFFX)/CELL), r=Math.floor((y-OFFY)/CELL);
     return (r>=0&&r<N&&c>=0&&c<N)? idx(r,c) : -1;
   }
